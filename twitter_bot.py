@@ -17,7 +17,7 @@ NITTER_INSTANCES = [
     "https://nitter.projectsegfau.lt"
 ]
 
-ACCOUNTS = ["elonmusk", "Vahid", "jadidat"] 
+ACCOUNTS = ["Twitter", "SpaceX", "NASA", "Github"]
 
 def send_to_bale(text):
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
