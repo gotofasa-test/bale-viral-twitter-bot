@@ -5,13 +5,18 @@ on:
   schedule:
     - cron: "*/30 * * * *"
 
+# اضافه کردن این بخش برای اطمینان از دسترسی نوشتن
+permissions:
+  contents: write
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-
     steps:
-      - name: actions/checkout@v3
+      - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # برای اینکه کل تاریخچه رو داشته باشه و در push خطا نده
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -31,6 +36,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
-          git add sent.json
-          git commit -m "Update sent tweets database" || exit 0
-          git push
+          git add sent.json || echo "No changes to add"
+          git commit -m "Update sent tweets database" || echo "No changes to commit"
+          git push origin main
