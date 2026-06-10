@@ -18,7 +18,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install snscrape requests pytz
+        run: pip install requests pytz
 
       - name: Run bot
         env:
