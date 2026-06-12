@@ -2,7 +2,7 @@ name: Twitter Viral Watcher
 
 on:
   schedule:
-    - cron: "*/20 * * * *" # هر ۲۰ دقیقه
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -33,12 +33,7 @@ jobs:
 
       - name: Commit database if changed
         run: |
-          if [ -n "$(git status --porcelain sent.json)" ]; then
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git add sent.json
-            git commit -m "update sent database"
-            git push
-          else
-            echo "No changes in sent.json"
-          fi
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add sent.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update sent posts" && git push)
