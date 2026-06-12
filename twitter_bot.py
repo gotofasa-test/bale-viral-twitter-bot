@@ -12,8 +12,9 @@ BALE_URL = f"https://tapi.bale.ai/bot{BOT_TOKEN}/sendMessage"
 
 # لیست فیدهای هدف (می‌توانی لینک‌های RSS.app خودت را اینجا بگذاری)
 RSS_FEEDS = [
-    {"user": "ElonMusk", "url": "https://rss.app/feeds/v1.1/t6L6IByu9pT38G6K.json"},
-    {"user": "TechCrunch", "url": "https://techcrunch.com/feed/"}
+    
+    {"user": "jacksonhinkle", "url": "https://rss.app/feeds/v1.1/nQRfNkiu3xqp5UPX.json"},
+    {"user": "Khamenei_fa", "url": "https://rss.app/feeds/v1.1/cxDtmcWC56oBdtTe.json"}
 ]
 
 def send_to_bale(text):
