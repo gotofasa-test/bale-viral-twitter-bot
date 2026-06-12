@@ -5,75 +5,85 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 import pytz
 
+# تنظیمات محیطی
 BOT_TOKEN = os.getenv("BALE_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 BALE_URL = f"https://tapi.bale.ai/bot{BOT_TOKEN}/sendMessage"
 
-# لیست فیدهای RSS معتبر (جایگزین مستقیم اکانت‌های توییتر)
-# تو می‌توانی از سایت rss.app برای هر اکانتی که بخواهی لینک بسازی
+# لیست فیدهای هدف (می‌توانی لینک‌های RSS.app خودت را اینجا بگذاری)
 RSS_FEEDS = [
-    {"user": "ElonMusk", "url": "https://rss.app/feeds/v1.1/t6L6IByu9pT38G6K.json"}, # مثال JSON Feed
-    {"user": "TechCrunch", "url": "https://techcrunch.com/feed/"} # برای تست محتوا
+    {"user": "ElonMusk", "url": "https://rss.app/feeds/v1.1/t6L6IByu9pT38G6K.json"},
+    {"user": "TechCrunch", "url": "https://techcrunch.com/feed/"}
 ]
 
 def send_to_bale(text):
+    if not BOT_TOKEN or not CHAT_ID:
+        print("⚠️ Missing Bale Credentials")
+        return
+    
     payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
-    requests.post(BALE_URL, json=payload, timeout=10)
+    try:
+        res = requests.post(BALE_URL, json=payload, timeout=15)
+        res.raise_for_status()
+    except Exception as e:
+        print(f"❌ Failed to send to Bale: {e}")
+
+def load_sent_posts(file_path):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
 
 def main():
     tehran = pytz.timezone("Asia/Tehran")
-    now = datetime.now(tehran).strftime("%H:%M")
-    
+    now_str = datetime.now(tehran).strftime("%H:%M")
     sent_file = "sent.json"
-    if os.path.exists(sent_file):
-        with open(sent_file, "r") as f:
-            try: sent = json.load(f)
-            except: sent = []
-    else:
-        sent = []
-
-    new_tweets_found = 0
     
+    sent_posts = load_sent_posts(sent_file)
+    new_found = False
+
     for feed in RSS_FEEDS:
         try:
             print(f"📡 Checking {feed['user']}...")
             response = requests.get(feed['url'], timeout=20)
+            response.raise_for_status()
             
-            if response.status_code == 200:
-                # اگر فید JSON بود (مثل RSS.app)
-                if feed['url'].endswith('.json'):
-                    data = response.json()
-                    for item in data.get('items', [])[:3]:
-                        item_id = str(item.get('id'))
-                        if item_id not in sent:
-                            title = item.get('title', 'No Title')
-                            link = item.get('url', '')
-                            msg = f"📣 *{feed['user']}*:\n\n{title}\n\n🔗 [Link]({link})\n⏰ {now}"
-                            send_to_bale(msg)
-                            sent.append(item_id)
-                            new_tweets_found += 1
-                # اگر فید XML بود
-                else:
-                    root = ET.fromstring(response.content)
-                    for item in root.findall("./channel/item")[:3]:
-                        link = item.find("link").text
-                        if link not in sent:
-                            title = item.find("title").text
-                            msg = f"📣 *{feed['user']}*:\n\n{title}\n\n🔗 [Link]({link})\n⏰ {now}"
-                            send_to_bale(msg)
-                            sent.append(link)
-                            new_tweets_found += 1
+            # مدیریت فیدهای JSON (مثل RSS.app)
+            if feed['url'].endswith('.json'):
+                items = response.json().get('items', [])[:5]
+                for item in items:
+                    post_id = str(item.get('id'))
+                    if post_id not in sent_posts:
+                        msg = f"📣 *{feed['user']}*:\n\n{item.get('title')}\n\n🔗 [Link]({item.get('url')})\n⏰ {now_str}"
+                        send_to_bale(msg)
+                        sent_posts.append(post_id)
+                        new_found = True
+            
+            # مدیریت فیدهای XML استاندارد
             else:
-                print(f"⚠️ Error {response.status_code} for {feed['user']}")
+                root = ET.fromstring(response.content)
+                for item in root.findall("./channel/item")[:5]:
+                    link = item.find("link").text
+                    if link not in sent_posts:
+                        title = item.find("title").text
+                        msg = f"📣 *{feed['user']}*:\n\n{title}\n\n🔗 [Link]({link})\n⏰ {now_str}"
+                        send_to_bale(msg)
+                        sent_posts.append(link)
+                        new_found = True
+                        
         except Exception as e:
-            print(f"❌ Failed: {e}")
+            print(f"⚠️ Error checking {feed['user']}: {e}")
 
-    with open(sent_file, "w") as f:
-        json.dump(sent[-100:], f)
-
-    # پیام وضعیت برای مجید
-    if new_tweets_found == 0:
-        send_to_bale(f"🔍 وضعیت: سیستم متصل است اما محتوای جدیدی در فیدها یافت نشد.\n⏰ {now}")
+    # ذخیره و نگه داشتن فقط ۱۰۰ مورد آخر برای سبک ماندن دیتابیس
+    if new_found:
+        with open(sent_file, "w") as f:
+            json.dump(sent_posts[-100:], f, indent=4)
+        print("✅ Database updated.")
+    else:
+        print("ℹ️ No new tweets found.")
 
 if __name__ == "__main__":
     main()
