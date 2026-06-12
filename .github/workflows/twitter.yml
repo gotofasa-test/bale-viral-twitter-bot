@@ -2,20 +2,16 @@ name: Twitter Viral Watcher
 
 on:
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "*/20 * * * *" # هر ۲۰ دقیقه
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pytz
 
-      - name: Run Twitter bot
+      - name: Run Twitter Bot
         env:
           BALE_TOKEN: ${{ secrets.BALE_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
@@ -37,16 +33,12 @@ jobs:
 
       - name: Commit database if changed
         run: |
-
-          if [[ -n "$(git status --porcelain sent.json)" ]]; then
-
+          if [ -n "$(git status --porcelain sent.json)" ]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
             git config --local user.name "github-actions[bot]"
-
             git add sent.json
-
             git commit -m "update sent database"
-
             git push
-
+          else
+            echo "No changes in sent.json"
           fi
